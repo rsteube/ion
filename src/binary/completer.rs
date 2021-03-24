@@ -177,7 +177,7 @@ impl<'a, 'b> Completer for IonCompleter<'a, 'b> {
 
             let output = Command::new("sh")
                 .arg("-c")
-                .arg(format!("{} nushell _ {}''", prefix, line))
+                .arg(format!("{} ion _ {}''", prefix, line))
                 .output()
                 .expect("failed to execute process");
             let output_str = from_utf8(&output.stdout).expect("ignore error");
