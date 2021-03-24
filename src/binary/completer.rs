@@ -2,12 +2,15 @@ use auto_enums::auto_enum;
 use glob::{glob_with, MatchOptions};
 use ion_shell::{expansion::Expander, Shell};
 use rustyline::{
-    completion::{Completer, FilenameCompleter, Pair},
+    completion::{Completer, Pair},
     highlight::Highlighter,
     hint::{Hinter, HistoryHinter},
     Context, Helper,
 };
-use std::{borrow::Cow, cell::RefCell, env, iter, num::NonZeroU8, path::PathBuf, str};
+use std::{borrow::Cow, cell::RefCell, iter, num::NonZeroU8, path::PathBuf, str};
+use std::process::Command;
+use std::str::from_utf8;
+use serde_json::Value;
 
 /// Unescape filenames for the completer so that special characters will be properly shown.
 fn unescape(input: &str) -> String {
@@ -164,77 +167,34 @@ impl<'a, 'b> Completer for IonCompleter<'a, 'b> {
         pos: usize,
         ctx: &Context,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
-        let (start, word_pos, completion_type) = getword(line, pos);
-        let shell = &self.shell.borrow();
-        let vars = shell.variables();
-        match completion_type {
-            // Initialize a new completer from the definitions collected.
-            // Creates a list of definitions from the shell environment that
-            // will be used in the creation of a custom completer.
-            // Add the list of available variables to the completer's
-            // definitions.
-            //
-            // TODO: We should make it free to do String->SmallString and mostly free to go back
-            // (free if allocated)
-            CompletionType::VariableAndFiles if start.starts_with('$') => Ok((
-                word_pos,
-                vars.string_vars()
-                    .filter(|(s, _)| s.starts_with(&start[1..]))
-                    .map(|(s, _)| format!("${}", &s))
-                    .map(|s| Pair { display: s.clone(), replacement: s })
-                    .collect(),
-            )),
-            CompletionType::VariableAndFiles if start.starts_with('@') => Ok((
-                word_pos,
-                vars.arrays()
-                    .filter(|(s, _)| s.starts_with(&start[1..]))
-                    .map(|(s, _)| format!("@{}", &s))
-                    .map(|s| Pair { display: s.clone(), replacement: s })
-                    .collect(),
-            )),
-            CompletionType::VariableAndFiles => FilenameCompleter::new().complete(line, pos, ctx),
-            CompletionType::Command => {
-                // Initialize a new completer from the definitions collected.
-                // Creates a list of definitions from the shell environment that
-                // will be used
-                // in the creation of a custom completer.
-                let mut suggestions = shell
-                    .builtins()
-                    .keys()
-                    // Add built-in commands to the completer's definitions.
-                    .map(ToString::to_string)
-                    // Add the aliases to the completer's definitions.
-                    .chain(vars.aliases().map(|(key, _)| key.to_string()))
-                    // Add the list of available functions to the completer's
-                    // definitions.
-                    .chain(vars.functions().map(|(key, _)| key.to_string()))
-                    .filter(|s| s.starts_with(start))
-                    .map(|s| Pair { display: s.clone(), replacement: s })
-                    .collect::<Vec<_>>();
-                // Creates completers containing definitions from all directories
-                // listed
-                // in the environment's **$PATH** variable.
-                if let Some(paths) = env::var_os("PATH") {
-                    for path in env::split_paths(&paths) {
-                        let path = if !path.to_string_lossy().ends_with('/') {
-                            let mut oss = path.into_os_string();
-                            oss.push("/");
-                            oss.into()
-                        } else {
-                            path
-                        };
-                        suggestions
-                            .extend(IonFileCompleter::new(Some(path), &shell).completions(start));
-                    }
-                } else {
-                    suggestions.extend(
-                        IonFileCompleter::new(Some("/bin/".into()), &shell).completions(start),
-                    )
-                }
-                Ok((word_pos, suggestions))
-            }
-            CompletionType::Nothing => Ok((line.len(), Vec::new())),
-        }
+            let cmd = line.split_whitespace().next().expect("ignore error");
+            let carapace = format!("carapace {}", cmd);
+            let prefix = match cmd {
+                "example" => "example _carapace",
+                "gh" => "gh _carapace",
+                _ => &carapace,
+            };
+
+            let output = Command::new("sh")
+                .arg("-c")
+                .arg(format!("{} nushell _ {}''", prefix, line))
+                .output()
+                .expect("failed to execute process");
+            let output_str = from_utf8(&output.stdout).expect("ignore error");
+            let empty = serde_json::from_str("[]").expect("ignore error");
+            let v: Value = serde_json::from_str(output_str).unwrap_or(empty);
+            let a = v.as_array().expect("ignore error");
+
+            let candidates = a
+                .into_iter()
+                .map(|entry| Pair {
+                    replacement: entry["Value"].as_str().expect("ignore error").to_string(),
+                    display: entry["Display"].as_str().expect("ignore error").to_string(),
+                })
+                .collect();
+
+            let (start, word_pos, completion_type) = getword(line, pos);
+            Ok((word_pos, candidates))
     }
 }
 
