@@ -1909,11 +1909,11 @@ checksum = "9f4c8858baa4ad3c8bcc156ae91a0ffe22b76a3975c40c49b4f04c15c6bce0da"
 [[package]]
 name = "redox_liner"
 version = "0.5.1"
-source = "git+https://gitlab.redox-os.org/redox-os/liner#616e61657fd611c3fe5818e6151300cbcbdd5c06"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f014f6b014591f45bdd86377ab2f01b840ddd9e33421222b84d06e244b111327"
 dependencies = [
  "bytecount",
  "itertools",
- "strip-ansi-escapes",
  "termion",
  "unicode-width",
 ]
@@ -1921,11 +1921,11 @@ dependencies = [
 [[package]]
 name = "redox_liner"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f014f6b014591f45bdd86377ab2f01b840ddd9e33421222b84d06e244b111327"
+source = "git+https://gitlab.redox-os.org/redox-os/liner#616e61657fd611c3fe5818e6151300cbcbdd5c06"
 dependencies = [
  "bytecount",
  "itertools",
+ "strip-ansi-escapes",
  "termion",
  "unicode-width",
 ]

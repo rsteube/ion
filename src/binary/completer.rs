@@ -171,7 +171,6 @@ impl<'a, 'b> Completer for IonCompleter<'a, 'b> {
             let carapace = format!("carapace {}", cmd);
             let prefix = match cmd {
                 "example" => "example _carapace",
-                "gh" => "gh _carapace",
                 _ => &carapace,
             };
 
