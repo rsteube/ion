@@ -77,7 +77,7 @@ auto_enums = "0.7"
 atty = "0.2"
 permutate = "0.3"
 xdg = "2.2"
-nix = "0.20"
+nix = "0.26"
 mktemp = "0.4"
 
 
